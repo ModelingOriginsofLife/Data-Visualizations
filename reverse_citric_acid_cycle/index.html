@@ -35,6 +35,10 @@
 	<svg id="svgdraw1" width="960" height="500">
 	</svg>
 </div>
+	<center>
+		pH: <input id="phslider" style="width:200px" type="range" min="3" max="10" value="7" step="1" onchange="updateGraph()"/>
+		<span style="position:absolute;left:620px" id="phDisplay">7</span>
+	</center>
 </div>
 <br>
 
@@ -54,6 +58,7 @@ metabolism. PNAS 101(36) pp. 13168--13173 (<a href="http://www.santafe.edu/media
 Cycle and Related Compounds. J Phys Chem Ref Data, 19(4)
 (<a href="http://www.nist.gov/data/PDFfiles/jpcrd394.pdf">http://www.nist.gov/data/PDFfiles/jpcrd394.pdf</a>)
 </li>
+<li><a href="http://equilibrator.weizmann.ac.il/">Equillibrator</a></li>
 </ul>
 
 <script src="http://d3js.org/d3.v3.min.js"></script>
@@ -62,7 +67,7 @@ Cycle and Related Compounds. J Phys Chem Ref Data, 19(4)
 var margin = {top: 20, right: 40, bottom: 30, left: 80},
     width = 960 - margin.left - margin.right,
     height = 500 - margin.top - margin.bottom,
-    m = 9, n = 3;
+    m = 9, n = 4;
     
 var stack = d3.layout.stack();
 
@@ -79,170 +84,162 @@ function interpolate(w, data, idx, jdx)
 	return data[idx][jdx]*(1-w)+data[idx+1][jdx]*w;
 }
 
-var tcaData =
+var tcaData = 
 [
-	["Names", "C", "H", "O", "DblBonds", "NCO2", "NH2O", "Gmain", "GCO2", "GH2O"],
-	["Oxaloacetate",    4, 2, 5, 3, 2, 0, -943.21,  -393.5, -285.8],
-	["Malate",          4, 4, 5, 2, 2, 0, -1007.41, -393.5, -285.8],
-	["Fumarate",        4, 2, 4, 3, 2, 1, -719.31,  -393.5, -285.8],
-	["Succinate",       4, 4, 4, 2, 2, 1, -821.51,  -393.5, -285.8],
-	["a-Ketoglutarate", 5, 4, 5, 3, 1, 2, -944.02,  -393.5, -285.8],
-	["Isocitrate",      6, 5, 7, 3, 0, 2, -1333.73, -393.5, -285.8],
-	["Aconitate",       6, 3, 6, 4, 0, 3, -1045.63, -393.5, -285.8],
-	["Citrate",         6, 5, 7, 3, 0, 2, -1339.93, -393.5, -285.8]
-]
+	["Names", "C", "H", "O", "DblBonds", "NCO2", "NH2O", "Gmain", "GCO2", "GH2O", "From dGs", "NH2", "GH+"],
+	["Oxaloacetate",    4, 2, 5, 3, 2, 0, -713.4,  -386, -157.3, -943.21,  0, 62.6],
+	["Malate",          4, 4, 5, 2, 2, 0, -682.9,  -386, -157.3, -1007.41, -1, 62.6],
+	["Fumarate",        4, 2, 4, 3, 2, 1, -522.0,  -386, -157.3, -719.31, -2, 62.6],
+	["Succinate",       4, 4, 4, 2, 2, 1, -530.7,  -386, -157.3, -821.51, -3, 62.6],
+	["a-Ketoglutarate", 5, 4, 5, 3, 1, 2, -633.7,  -386, -157.3, -944.02, -5, 62.6],
+	["Isocitrate",      6, 5, 7, 3, 0, 2, -956.4, -386, -157.3, -1333.73, -5, 62.6],
+	["Aconitate",       6, 3, 6, 4, 0, 3, -797.3, -386, -157.3, -1045.63, -6, 62.6],
+	["Citrate",         6, 5, 7, 3, 0, 2, -963.0, -386, -157.3, -1339.93, -6, 62.6]
+];
 
-		var chartData = [ [], [], [] ];
-		var compositionData = [ [], [], [], []];
-		
-		var names = [];
-				
-		for (var i=1;i<tcaData.length;i++)
-		{
-			names.push(tcaData[i][0]);
-			
-			for (var j=0;j<10;j++)
-			{
-				var xval = i-1.25 + 0.5*(j/10.0);
-				chartData[0].push({ x: xval, y: -tcaData[i][5]*tcaData[i][8], y0: 0});
-				chartData[1].push({ x: xval, y: -tcaData[i][6]*tcaData[i][9], y0: 0});
-				chartData[2].push({ x: xval, y: -tcaData[i][7], y0: 0});
-				
-				for (k=1;k<=4;k++)
-					compositionData[k-1].push({ x: xval, y: tcaData[i][k]});
-			}
-
-			if (i<tcaData.length-1)
-				for (var j=0;j<10;j++)
-				{
-					var xval = i-0.75 + 0.5*(j/10.0);
-					var u = (j/10.0);
-					var w = 6*u*u*u*u*u-15*u*u*u*u+10*u*u*u;
-					var y0,y1,yval;
-				
-					y0 = -tcaData[i][5]*tcaData[i][8];
-					y1 = -tcaData[i+1][5]*tcaData[i+1][8];				
-					yval = w*y1+(1-w)*y0;				
-					chartData[0].push({ x: xval, y: yval, y0: 0});
-					
-					y0 = -tcaData[i][6]*tcaData[i][9];
-					y1 = -tcaData[i+1][6]*tcaData[i+1][9];
-					yval = w*y1+(1-w)*y0;				
-					chartData[1].push({ x: xval, y: yval, y0: 0});
+function getDeltaG(compound, pH)
+{
+	var u0 = Math.floor(pH-3);
+	var u1 = u0+1;
 	
-					y0 = -tcaData[i][7];
-					y1 = -tcaData[i+1][7];
-					yval = w*y1+(1-w)*y0;				
-					chartData[2].push({ x: xval, y: yval, y0: 0});
+	if (u0<0) u0 = 0;
+	if (u0>7) u0 = 7;
+	if (u1<0) u1 = 0;
+	if (u1>7) u1 = 7;
+	
+	var pHData = // Values at 3,4,5,6,7,8,9,10
+	{
+		"Oxaloacetate": [-766.9, -749.7, -736.2, -724.8, -713.4, -702.0, -690.6, -679.2],
+		"Malate":       [-789.4, -758.6, -730.1, -705.7, -682.9, -660.1, -637.3, -614.5],
+		"Fumarate": 	[-577.3, -559.7, -544.8, -533.4, -522.0, -510.6, -499.2, -487.8],
+		"Succinate": 	[-644.0, -609.7, -580.0, -553.5, -530.7, -507.9, -485.1, -462.2],
+		"a-Ketoglutarate": [-734.5, -706.0, -679.3, -656.5, -633.7, -610.9, -588.0, -565.2],
+		"Isocitrate": 	[-1101.3, -1059.7, -1021.4, -987.2, -956.4, -927.8, -899.3, -870.8],
+		"Aconitate": 	[-865.8, -848.7, -831.6, -814.4, -797.3, -780.2, -763.1, -746.0],
+		"Citrate": 		[-1107.3, -1066.6, -1028.0, -993.8, -963.0, -934.5, -906.0, -877.4],
+		"H2O": 			[-203.0,       -191.6,       -180.1,       -168.7,       -157.3,       -145.9,       -134.5,       -123.1],
+		"CO2": 			[-588.9+203.0, -577.5+191.6, -566.1+180.1, -554.7+168.7, -546.8+157.3, -541.1+145.9, -535.4+134.5, -529.7+123.1], //CO2(total) contains a water molecule
+		"H+": [484.8-445.0, 638.8-593.3, 792.8-741.6, 946.9-890.0, 1100.9-1038.3, 1254.9-1186.6, 1409.0-1335.0, 1563.0-1483.3]
+	};
+	
+	var u = (pH-3)-u0;
+	
+	return u*pHData[compound][u1]+(1-u)*pHData[compound][u0];
+}
 
-					for (k=1;k<=4;k++)
-						compositionData[k-1].push({ x: xval, y: interpolate(w,tcaData,i,k)})
-				}
-			else
-			for (var j=0;j<5;j++)
-			{
-				var xval = i-0.75 + 0.5*(j/10.0);
-				chartData[0].push({ x: xval, y: -tcaData[i][5]*tcaData[i][8], y0: 0});
-				chartData[1].push({ x: xval, y: -tcaData[i][6]*tcaData[i][9], y0: 0});
-				chartData[2].push({ x: xval, y: -tcaData[i][7], y0: 0});
+function setupTcaData(pH)
+{
+	for (var i=1;i<tcaData.length;i++)
+	{
+		tcaData[i][7] = getDeltaG(tcaData[i][0], pH);
+		tcaData[i][8] = getDeltaG("CO2", pH);
+		tcaData[i][9] = getDeltaG("H2O", pH);
+		tcaData[i][12] = getDeltaG("H+", pH);
+	}
+}
 
-/*				for (k=1;k<=4;k++)
-					compositionData[k-1].push({ x: xval, y: tcaData[i][k]});*/
-			}
-		}
+var chartData;
+var compositionData;
+var names;
+
+var x,y,y2,xAxis,yAxis, area, arealine, lines;
+var color = ["rgb(128,192,128)", "rgb(128,128,192)", "rgb(160, 128, 92)", "rgb(192,64,64)"]; 
+var color2 = ["rgb(64,192,64)", "rgb(64,64,192)", "rgb(160, 92, 64)", "rgb(192, 64, 64)"]; 
+
+function setupGraph()
+{
+	names = [];
+	for (var i=1;i<tcaData.length;i++)
+		names.push(tcaData[i][0]);
 		
-		var layers = stack(chartData);
-		var yGroupMax = d3.max(layers, function(layer) { return d3.max(layer, function(d) { return d.y; })});
-		var yStackMax = d3.max(layers, function(layer) { return d3.max(layer, function(d) { return d.y0; })});
+	x = d3.scale.linear()
+		  .domain([-0.25,7.5-0.05])
+		  .range([0,width]);
+			//.rangeRoundBands([0, width], .08);
 		
-		var x = d3.scale.linear()
-				.domain([-0.25,7.5-0.05])
-				.range([0,width]);
-				//.rangeRoundBands([0, width], .08);
-		
-		var y = d3.scale.linear()
-				.domain([0, 2000])
-				.range([height, 0]);
+	y = d3.scale.linear()
+		  .domain([0, 2000])
+		  .range([height, 0]);
+			
+	y2 = d3.scale.linear()
+			.domain([0, 8])
+			.range([height, 0]);
+					
+	xAxis = d3.svg.axis()
+			.scale(x)
+			.tickValues([0,1,2,3,4,5,6,7])
+			.tickFormat(function(d) { return names[Math.floor(d)]; })
+			.tickSize(2)
+			.tickPadding(6)
+			.orient("bottom");
 				
-		var y2 = d3.scale.linear()
-				.domain([0, 8])
-				.range([height, 0]);
-				
-		var color = ["rgb(128,192,128)", "rgb(128,128,192)", "rgb(160, 128, 92)"]; 
-		var color2 = ["rgb(64,192,64)", "rgb(64,64,192)", "rgb(160, 92, 64)", "rgb(192, 64, 64)"]; 
-				
-		var xAxis = d3.svg.axis()
-				.scale(x)
-				.tickValues([0,1,2,3,4,5,6,7])
-				.tickFormat(function(d) { return names[Math.floor(d)]; })
-				.tickSize(2)
-				.tickPadding(6)
-				.orient("bottom");
-				
-		var yAxis = d3.svg.axis()
-				.scale(y)
-				.tickSize(2)
-				.tickPadding(6)
-				.orient("left");
+	yAxis = d3.svg.axis()
+			.scale(y)
+			.tickSize(2)
+			.tickPadding(6)
+			.orient("left");
 						
-		var yAxis2 = d3.svg.axis()
-				.scale(y2)
-				.tickValues([1,2,3,4,5,6,7,8])
-				.tickSize(2)
-				.tickPadding(6)
-				.orient("left");
-						
-		var area = d3.svg.area()
-						 .x(function(d) { return x(d.x); })
-						 .y0(function(d) { return y(d.y0); })
-						 .y1(function(d) { return y(d.y0+d.y); });
-		
-		var arealine = d3.svg.line()
-						 .x(function(d) { return x(d.x); })
-						 .y(function(d) { return y(d.y0+d.y); })
-		// Background
-		graph1.append("rect")
+	yAxis2 = d3.svg.axis()
+			.scale(y2)
+			.tickValues([1,2,3,4,5,6,7,8])
+			.tickSize(2)
+			.tickPadding(6)
+			.orient("left");
+
+	area = d3.svg.area()
+					 .x(function(d) { return x(d.x); })
+					 .y0(function(d) { return y(d.y0); })
+					 .y1(function(d) { return y(d.y0+d.y); });
+	
+	arealine = d3.svg.line()
+					 .x(function(d) { return x(d.x); })
+					 .y(function(d) { return y(d.y0+d.y); })
+
+	lines = d3.svg.line()
+						.x(function(d) { return x(d.x); })
+						.y(function(d) { return y2(d.y); });
+	// Background
+	graph1.append("g")
+		  .attr("render-order", 1)
+		  .append("rect")
 			.attr("fill","rgb(240,250,255)")
 			.attr("x",0)
 			.attr("y",0)
 			.attr("width",width)
 			.attr("height",height);
+			
+	graph2.append("g")
+		  .attr("render-order", 1)
+		  .append("rect")
+			.attr("fill","rgb(240,250,255)")
+			.attr("x",0)
+			.attr("y",0)
+			.attr("width",width)
+			.attr("height",height);
+}
+
+function finishGraph()
+{
+	var xGridLines = 
+	[
+		0.5,1.5,2.5,3.5,4.5,5.5,6.5
+	];
 		
-		graph1.selectAll("path")
-			 .data(layers)
-			 .enter()
-			 .append("path")
-			 .attr("d",area)
-			 .style("fill", function(d, i) { return color[i]; });
+	var yGridLines =
+	[
+		200,400,600,800,1000,1200,1400,1600,1800,2000
+	];
 		
-		graph1.selectAll(".pathline")
-			 .data(layers)
-			 .enter()
-			 .append("path")
-			 .attr("class","pathline")
-			 .attr("d",arealine)
-			 .attr("stroke", "rgb(0,0,0)")
-			 .attr("stroke-width", 1.5)
-			 .attr("fill", "rgba(0,0,0,0)")
-			 
-		var xGridLines = 
-		[
-			0.5,1.5,2.5,3.5,4.5,5.5,6.5
-		];
+	var y2GridLines =
+	[
+		1,2,3,4,5,6,7,8
+	];
 		
-		var yGridLines =
-		[
-			200,400,600,800,1000,1200,1400,1600,1800,2000
-		];
-		
-		var y2GridLines =
-		[
-			1,2,3,4,5,6,7,8
-		];
-		
-		graph1.selectAll(".xgline")
+	graph1.selectAll(".xgline")
 			.data(xGridLines)
 			.enter()
+			.append("g")
+			.attr("render-order",3)
 			.append("line")
 			.attr("class","xgline")
 			.attr("stroke-width", 2.0)
@@ -253,9 +250,11 @@ var tcaData =
 			.attr("x2", function(d) { return x(d); })
 			.attr("y2", function(d) { return y(2000); });
 			
-		graph1.selectAll(".ygline")
+	graph1.selectAll(".ygline")
 			.data(yGridLines)
 			.enter()
+			.append("g")
+			.attr("render-order",3)
 			.append("line")
 			.attr("class","ygline")
 			.attr("stroke-width", 1.0)
@@ -265,70 +264,12 @@ var tcaData =
 			.attr("y1", function(d) { return y(d); })
 			.attr("x2", function(d) { return x(7.5-0.05); })
 			.attr("y2", function(d) { return y(d); });
-		
-		var layerLabels = 
-		[
-			{ x: 1.9, y: 350, text: "$CO_2$" },
-			{ x: 5.8, y: 350, text: "$H_2O$" },
-			{ x: 2.8, y: 1500, text: "$Carrier$" }
-		];			
-		
-		var container = d3.select("#rTCAEnergy");
-		
-		container.selectAll("div")
-			 .data(layerLabels)
-			 .enter()
-			 .append("div")
-			 .style("position", "absolute")
-			 .style("left", function(d) { return x(d.x)+margin.left; })
-			 .style("top", function(d) { return y(d.y)+margin.top; })
-			 .text(function(d) { return d.text; });
-		
-		container.append("div")			 
-			 .style("position", "absolute")			 
-			 .style("left", function(d) { return -110+margin.left; })
-			 .style("top", function(d) { return height/2+margin.top; })
-			 .attr("class", "ylabel")
-			 .text("$-\\Delta G_f (kJ/mol)$");
-			 			
-		graph1.append("g")
-			.attr("class", "x axis")
-			.attr("transform", "translate(0," + height + ")")
-			.call(xAxis);
 
-		graph1.append("g")
-			.attr("class", "y axis")
-			//.attr("transform", "translate(0," + height + ")")
-			.call(yAxis);
-			
-			
-			
-		// Now graph 2
-		
-		var lines = d3.svg.line()
-						.x(function(d) { return x(d.x); })
-						.y(function(d) { return y2(d.y); });
-						
-		
-		graph2.append("rect")
-			.attr("fill","rgb(240,250,255)")
-			.attr("x",0)
-			.attr("y",0)
-			.attr("width",width)
-			.attr("height",height);
-		
-		graph2.selectAll("path")
-				.data(compositionData)
-				.enter()
-				.append("path")
-				.attr("fill", "rgba(255,255,255,0)")
-				.attr("stroke", function(d,i) { return color2[i]; })
-				.attr("stroke-width", function (d,i) { return 12-3*i; })
-				.attr("d", function(d) { return lines(d); });
-		
-		graph2.selectAll(".xgline")
+	graph2.selectAll(".xgline")
 			.data(xGridLines)
 			.enter()
+			.append("g")
+			.attr("render-order",3)
 			.append("line")
 			.attr("class","xgline")
 			.attr("stroke-width", 2.0)
@@ -339,9 +280,11 @@ var tcaData =
 			.attr("x2", function(d) { return x(d); })
 			.attr("y2", function(d) { return y2(8); });
 			
-		graph2.selectAll(".ygline")
+	graph2.selectAll(".ygline")
 			.data(y2GridLines)
 			.enter()
+			.append("g")
+			.attr("render-order",3)
 			.append("line")
 			.attr("class","ygline")
 			.attr("stroke-width", 1.0)
@@ -352,12 +295,51 @@ var tcaData =
 			.attr("x2", function(d) { return x(7.5-0.05); })
 			.attr("y2", function(d) { return y2(d); });
 
-		graph2.append("g")
+	var layerLabels = 
+	[
+		{ x: 1.9, y: 350, text: "$CO_2$" },
+		{ x: 5.8, y: 250, text: "$H_2O$" },
+		{ x: 2.8, y: 1200, text: "$Carrier$" },
+		{ x: 6.5, y: 1580, text: "$H_+$" },
+	];			
+		
+	var container = d3.select("#rTCAEnergy");
+		
+	container.selectAll("div")
+			 .data(layerLabels)
+			 .enter()
+			 .append("div")
+			 .style("position", "absolute")
+			 .style("left", function(d) { return x(d.x)+margin.left; })
+			 .style("top", function(d) { return y(d.y)+margin.top; })
+			 .text(function(d) { return d.text; });
+		
+	container.append("div")			 
+			 .style("position", "absolute")			 
+			 .style("left", function(d) { return -110+margin.left; })
+			 .style("top", function(d) { return height/2+margin.top; })
+			 .attr("class", "ylabel")
+			 .text("$-\\Delta G_f (kJ/mol)$");
+			 			
+	graph1.append("g")
+			.attr("render-order",3)
+			.attr("class", "x axis")
+			.attr("transform", "translate(0," + height + ")")
+			.call(xAxis);
+
+	graph1.append("g")
+			.attr("render-order",3)
+			.attr("class", "y axis")
+			.call(yAxis);
+
+	graph2.append("g")
+			.attr("render-order",3)
 			.attr("class", "x axis")
 			.attr("transform", "translate(0," + height + ")")
 			.call(xAxis);
 
 		graph2.append("g")
+			.attr("render-order",3)
 			.attr("class", "y axis")
 			//.attr("transform", "translate(0," + height + ")")
 			.call(yAxis2);
@@ -382,6 +364,130 @@ var tcaData =
 			 .html(function(d) { return d.text; });
 
 		MathJax.Hub.Queue(["Typeset",MathJax.Hub]);
+}
+
+setupGraph();
+
+function updateGraph()
+{
+	var pH = document.getElementById("phslider").value;
+	document.getElementById("phDisplay").innerHTML = pH;
+	
+	setupTcaData(pH);
+
+	chartData = [ [],[],[],[] ];
+	compositionData = [ [],[],[],[] ];
+	
+	for (var i=1;i<tcaData.length;i++)
+	{			
+	for (var j=0;j<10;j++)
+	{
+		var xval = i-1.25 + 0.5*(j/10.0);
+		chartData[0].push({ x: xval, y: -tcaData[i][5]*tcaData[i][8], y0: 0});
+		chartData[1].push({ x: xval, y: -tcaData[i][6]*tcaData[i][9], y0: 0});
+		chartData[2].push({ x: xval, y: -tcaData[i][7], y0: 0});
+		chartData[3].push({ x: xval, y: -tcaData[i][12]*tcaData[i][11], y0: 0});
+				
+		for (k=1;k<=4;k++)
+			compositionData[k-1].push({ x: xval, y: tcaData[i][k]});
+	}
+
+	if (i<tcaData.length-1)
+		for (var j=0;j<10;j++)
+		{
+			var xval = i-0.75 + 0.5*(j/10.0);
+			var u = (j/10.0);
+			var w = 6*u*u*u*u*u-15*u*u*u*u+10*u*u*u;
+			var y0,y1,yval;
+		
+			y0 = -tcaData[i][5]*tcaData[i][8];
+			y1 = -tcaData[i+1][5]*tcaData[i+1][8];				
+			yval = w*y1+(1-w)*y0;				
+			chartData[0].push({ x: xval, y: yval, y0: 0});
+					
+			y0 = -tcaData[i][6]*tcaData[i][9];
+			y1 = -tcaData[i+1][6]*tcaData[i+1][9];
+			yval = w*y1+(1-w)*y0;				
+			chartData[1].push({ x: xval, y: yval, y0: 0});
+	
+			y0 = -tcaData[i][7];
+			y1 = -tcaData[i+1][7];
+			yval = w*y1+(1-w)*y0;				
+			chartData[2].push({ x: xval, y: yval, y0: 0});
+
+			y0 = -tcaData[i][12]*tcaData[i][11];
+			y1 = -tcaData[i+1][12]*tcaData[i+1][11];
+			yval = w*y1+(1-w)*y0;				
+			chartData[3].push({ x: xval, y: yval, y0: 0});
+					
+			for (k=1;k<=4;k++)
+				compositionData[k-1].push({ x: xval, y: interpolate(w,tcaData,i,k)})
+		}
+		else for (var j=0;j<5;j++)
+		{
+			var xval = i-0.75 + 0.5*(j/10.0);
+			chartData[0].push({ x: xval, y: -tcaData[i][5]*tcaData[i][8], y0: 0});
+			chartData[1].push({ x: xval, y: -tcaData[i][6]*tcaData[i][9], y0: 0});
+			chartData[2].push({ x: xval, y: -tcaData[i][7], y0: 0});
+			chartData[3].push({ x: xval, y: -tcaData[i][12]*tcaData[i][11], y0: 0});
+		}
+	}
+		
+	var layers = stack(chartData);
+	var yGroupMax = d3.max(layers, function(layer) { return d3.max(layer, function(d) { return d.y; })});
+	var yStackMax = d3.max(layers, function(layer) { return d3.max(layer, function(d) { return d.y0; })});							
+		
+	// Add 
+	graph1.selectAll(".pathdata")
+			 .data(layers)
+			 .enter()
+			 .append("g")
+			 .attr("render-order",0)
+			 .append("path")
+			 .attr("class", "pathdata")
+			 .attr("d",area)
+			 .style("fill", function(d, i) { return color[i]; });
+			 
+	// Update
+	graph1.selectAll(".pathdata")
+			.data(layers)
+			.transition()
+			.attr("d",area);			
+			
+	graph1.selectAll(".pathline")
+			 .data(layers)
+			 .enter()
+			 .append("path")
+			 .attr("class","pathline")
+			 .attr("d",arealine)
+			 .attr("stroke", "rgb(0,0,0)")
+			 .attr("stroke-width", 1.5)
+			 .attr("fill", "rgba(0,0,0,0)")
+	
+	// Update
+	graph1.selectAll(".pathline")
+			 .data(layers)
+			 .transition()
+			 .attr("d",arealine)
+			 
+	// Now graph 2
+												
+	graph2.selectAll(".comppath")
+				.data(compositionData)
+				.enter()
+				.append("g")
+				.attr("class","comppath")
+				.attr("render-order", "2")
+				.append("path")
+				.attr("fill", "rgba(255,255,255,0)")
+				.attr("stroke", function(d,i) { return color2[i]; })
+				.attr("stroke-width", function (d,i) { return 12-3*i; })
+				.attr("d", function(d) { return lines(d); });
+}
+
+updateGraph();
+finishGraph();
+
 </script>
 
 </body>

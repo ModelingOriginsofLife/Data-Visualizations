@@ -1,0 +1,378 @@
+<html>
+
+<head>
+	
+	<script type="text/x-mathjax-config">
+		MathJax.Hub.Config({
+			tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
+		});
+</script>
+	
+	<script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+	</script>		
+	
+	<style>
+		div
+		{
+			position:relative
+		}
+		
+		.ylabel 
+		{
+			-webkit-transform: rotate(-90deg); 
+			transform: rotate(-90deg);
+		}
+	</style>
+</head>
+<body>
+<center>
+<h2>Visualizations of properties of the rTCA cycle</h2>
+</center>
+
+<div style="width:1000">
+<center><h3>Energy of the reaction complex</h3></center>
+<div id="rTCAEnergy">
+	<svg id="svgdraw1" width="960" height="500">
+	</svg>
+</div>
+</div>
+<br>
+
+<div style="width:1000">
+<center><h3>Composition of the carrier</h3></center>
+<div id="rTCAComponents">
+	<svg id="svgdraw2" width="960" height="500">
+	</svg>
+</div>
+</div>
+<br>
+Constructed using data from:
+<ul>
+<li>Smith, E. and Morowitz, H. (2004) Universality in intermediary
+metabolism. PNAS 101(36) pp. 13168--13173 (<a href="http://www.santafe.edu/media/workingpapers/04-07-024.pdf">http://www.santafe.edu/media/workingpapers/04-07-024.pdf</a>)</li>
+<li>Miller, S. and Smith-Magowan (1990) The Thermodynamics of the Krebs
+Cycle and Related Compounds. J Phys Chem Ref Data, 19(4)
+(<a href="http://www.nist.gov/data/PDFfiles/jpcrd394.pdf">http://www.nist.gov/data/PDFfiles/jpcrd394.pdf</a>)
+</li>
+</ul>
+
+<script src="http://d3js.org/d3.v3.min.js"></script>
+
+<script>
+var margin = {top: 20, right: 40, bottom: 30, left: 80},
+    width = 960 - margin.left - margin.right,
+    height = 500 - margin.top - margin.bottom,
+    m = 9, n = 3;
+    
+var stack = d3.layout.stack();
+
+var graph1 = d3.select("#svgdraw1")
+			  .append("g")
+			  .attr("transform","translate("+margin.left+","+margin.top+")");
+
+var graph2 = d3.select("#svgdraw2")
+			  .append("g")
+			  .attr("transform","translate("+margin.left+","+margin.top+")");
+			  
+function interpolate(w, data, idx, jdx)
+{
+	return data[idx][jdx]*(1-w)+data[idx+1][jdx]*w;
+}
+			  
+d3.text("rTCA_main.txt", function(data) {		
+		var tcaData = d3.csv.parseRows(data);
+		var chartData = [ [], [], [] ];
+		var compositionData = [ [], [], [], []];
+		
+		var names = [];
+				
+		for (var i=1;i<tcaData.length;i++)
+		{
+			names.push(tcaData[i][0]);
+			
+			for (var j=0;j<10;j++)
+			{
+				var xval = i-1.25 + 0.5*(j/10.0);
+				chartData[0].push({ x: xval, y: -tcaData[i][5]*tcaData[i][8], y0: 0});
+				chartData[1].push({ x: xval, y: -tcaData[i][6]*tcaData[i][9], y0: 0});
+				chartData[2].push({ x: xval, y: -tcaData[i][7], y0: 0});
+				
+				for (k=1;k<=4;k++)
+					compositionData[k-1].push({ x: xval, y: tcaData[i][k]});
+			}
+
+			if (i<tcaData.length-1)
+				for (var j=0;j<10;j++)
+				{
+					var xval = i-0.75 + 0.5*(j/10.0);
+					var u = (j/10.0);
+					var w = 6*u*u*u*u*u-15*u*u*u*u+10*u*u*u;
+					var y0,y1,yval;
+				
+					y0 = -tcaData[i][5]*tcaData[i][8];
+					y1 = -tcaData[i+1][5]*tcaData[i+1][8];				
+					yval = w*y1+(1-w)*y0;				
+					chartData[0].push({ x: xval, y: yval, y0: 0});
+					
+					y0 = -tcaData[i][6]*tcaData[i][9];
+					y1 = -tcaData[i+1][6]*tcaData[i+1][9];
+					yval = w*y1+(1-w)*y0;				
+					chartData[1].push({ x: xval, y: yval, y0: 0});
+	
+					y0 = -tcaData[i][7];
+					y1 = -tcaData[i+1][7];
+					yval = w*y1+(1-w)*y0;				
+					chartData[2].push({ x: xval, y: yval, y0: 0});
+
+					for (k=1;k<=4;k++)
+						compositionData[k-1].push({ x: xval, y: interpolate(w,tcaData,i,k)})
+				}
+			else
+			for (var j=0;j<5;j++)
+			{
+				var xval = i-0.75 + 0.5*(j/10.0);
+				chartData[0].push({ x: xval, y: -tcaData[i][5]*tcaData[i][8], y0: 0});
+				chartData[1].push({ x: xval, y: -tcaData[i][6]*tcaData[i][9], y0: 0});
+				chartData[2].push({ x: xval, y: -tcaData[i][7], y0: 0});
+
+/*				for (k=1;k<=4;k++)
+					compositionData[k-1].push({ x: xval, y: tcaData[i][k]});*/
+			}
+		}
+		
+		var layers = stack(chartData);
+		var yGroupMax = d3.max(layers, function(layer) { return d3.max(layer, function(d) { return d.y; })});
+		var yStackMax = d3.max(layers, function(layer) { return d3.max(layer, function(d) { return d.y0; })});
+		
+		var x = d3.scale.linear()
+				.domain([-0.25,7.5-0.05])
+				.range([0,width]);
+				//.rangeRoundBands([0, width], .08);
+		
+		var y = d3.scale.linear()
+				.domain([0, 2000])
+				.range([height, 0]);
+				
+		var y2 = d3.scale.linear()
+				.domain([0, 8])
+				.range([height, 0]);
+				
+		var color = ["rgb(128,192,128)", "rgb(128,128,192)", "rgb(160, 128, 92)"]; 
+		var color2 = ["rgb(64,192,64)", "rgb(64,64,192)", "rgb(160, 92, 64)", "rgb(192, 64, 64)"]; 
+				
+		var xAxis = d3.svg.axis()
+				.scale(x)
+				.tickValues([0,1,2,3,4,5,6,7])
+				.tickFormat(function(d) { return names[Math.floor(d)]; })
+				.tickSize(2)
+				.tickPadding(6)
+				.orient("bottom");
+				
+		var yAxis = d3.svg.axis()
+				.scale(y)
+				.tickSize(2)
+				.tickPadding(6)
+				.orient("left");
+						
+		var yAxis2 = d3.svg.axis()
+				.scale(y2)
+				.tickValues([1,2,3,4,5,6,7,8])
+				.tickSize(2)
+				.tickPadding(6)
+				.orient("left");
+						
+		var area = d3.svg.area()
+						 .x(function(d) { return x(d.x); })
+						 .y0(function(d) { return y(d.y0); })
+						 .y1(function(d) { return y(d.y0+d.y); });
+		
+		var arealine = d3.svg.line()
+						 .x(function(d) { return x(d.x); })
+						 .y(function(d) { return y(d.y0+d.y); })
+		// Background
+		graph1.append("rect")
+			.attr("fill","rgb(240,250,255)")
+			.attr("x",0)
+			.attr("y",0)
+			.attr("width",width)
+			.attr("height",height);
+		
+		graph1.selectAll("path")
+			 .data(layers)
+			 .enter()
+			 .append("path")
+			 .attr("d",area)
+			 .style("fill", function(d, i) { return color[i]; });
+		
+		graph1.selectAll(".pathline")
+			 .data(layers)
+			 .enter()
+			 .append("path")
+			 .attr("class","pathline")
+			 .attr("d",arealine)
+			 .attr("stroke", "rgb(0,0,0)")
+			 .attr("stroke-width", 1.5)
+			 .attr("fill", "rgba(0,0,0,0)")
+			 
+		var xGridLines = 
+		[
+			0.5,1.5,2.5,3.5,4.5,5.5,6.5
+		];
+		
+		var yGridLines =
+		[
+			200,400,600,800,1000,1200,1400,1600,1800,2000
+		];
+		
+		var y2GridLines =
+		[
+			1,2,3,4,5,6,7,8
+		];
+		
+		graph1.selectAll(".xgline")
+			.data(xGridLines)
+			.enter()
+			.append("line")
+			.attr("class","xgline")
+			.attr("stroke-width", 2.0)
+			.attr("stroke", "rgba(0,0,0,0.25)")
+			.attr("stroke-dasharray","10,6")
+			.attr("x1", function(d) { return x(d); })
+			.attr("y1", function(d) { return y(0); })
+			.attr("x2", function(d) { return x(d); })
+			.attr("y2", function(d) { return y(2000); });
+			
+		graph1.selectAll(".ygline")
+			.data(yGridLines)
+			.enter()
+			.append("line")
+			.attr("class","ygline")
+			.attr("stroke-width", 1.0)
+			.attr("stroke", "rgba(0,0,0,0.25)")
+			.attr("stroke-dasharray","5,3")
+			.attr("x1", function(d) { return x(-0.25); })
+			.attr("y1", function(d) { return y(d); })
+			.attr("x2", function(d) { return x(7.5-0.05); })
+			.attr("y2", function(d) { return y(d); });
+		
+		var layerLabels = 
+		[
+			{ x: 1.9, y: 350, text: "$CO_2$" },
+			{ x: 5.8, y: 350, text: "$H_2O$" },
+			{ x: 2.8, y: 1500, text: "$Carrier$" }
+		];			
+		
+		var container = d3.select("#rTCAEnergy");
+		
+		container.selectAll("div")
+			 .data(layerLabels)
+			 .enter()
+			 .append("div")
+			 .style("position", "absolute")
+			 .style("left", function(d) { return x(d.x)+margin.left; })
+			 .style("top", function(d) { return y(d.y)+margin.top; })
+			 .text(function(d) { return d.text; });
+		
+		container.append("div")			 
+			 .style("position", "absolute")			 
+			 .style("left", function(d) { return -110+margin.left; })
+			 .style("top", function(d) { return height/2+margin.top; })
+			 .attr("class", "ylabel")
+			 .text("$-\\Delta G_f (kJ/mol)$");
+			 			
+		graph1.append("g")
+			.attr("class", "x axis")
+			.attr("transform", "translate(0," + height + ")")
+			.call(xAxis);
+
+		graph1.append("g")
+			.attr("class", "y axis")
+			//.attr("transform", "translate(0," + height + ")")
+			.call(yAxis);
+			
+			
+			
+		// Now graph 2
+		
+		var lines = d3.svg.line()
+						.x(function(d) { return x(d.x); })
+						.y(function(d) { return y2(d.y); });
+						
+		
+		graph2.append("rect")
+			.attr("fill","rgb(240,250,255)")
+			.attr("x",0)
+			.attr("y",0)
+			.attr("width",width)
+			.attr("height",height);
+		
+		graph2.selectAll("path")
+				.data(compositionData)
+				.enter()
+				.append("path")
+				.attr("fill", "rgba(255,255,255,0)")
+				.attr("stroke", function(d,i) { return color2[i]; })
+				.attr("stroke-width", function (d,i) { return 12-3*i; })
+				.attr("d", function(d) { return lines(d); });
+		
+		graph2.selectAll(".xgline")
+			.data(xGridLines)
+			.enter()
+			.append("line")
+			.attr("class","xgline")
+			.attr("stroke-width", 2.0)
+			.attr("stroke", "rgba(0,0,0,0.25)")
+			.attr("stroke-dasharray","10,6")
+			.attr("x1", function(d) { return x(d); })
+			.attr("y1", function(d) { return y2(0); })
+			.attr("x2", function(d) { return x(d); })
+			.attr("y2", function(d) { return y2(8); });
+			
+		graph2.selectAll(".ygline")
+			.data(y2GridLines)
+			.enter()
+			.append("line")
+			.attr("class","ygline")
+			.attr("stroke-width", 1.0)
+			.attr("stroke", "rgba(0,0,0,0.25)")
+			.attr("stroke-dasharray","5,3")
+			.attr("x1", function(d) { return x(-0.25); })
+			.attr("y1", function(d) { return y2(d); })
+			.attr("x2", function(d) { return x(7.5-0.05); })
+			.attr("y2", function(d) { return y2(d); });
+
+		graph2.append("g")
+			.attr("class", "x axis")
+			.attr("transform", "translate(0," + height + ")")
+			.call(xAxis);
+
+		graph2.append("g")
+			.attr("class", "y axis")
+			//.attr("transform", "translate(0," + height + ")")
+			.call(yAxis2);
+		
+		layerLabels = 
+		[
+			{ x: 7.25, y: 3.15, text: "$C$" },
+			{ x: 7.25, y: 5.14, text: "$H$" },
+			{ x: 7.25, y: 7.15, text: "$O$" },
+			{ x: 7.25, y: 6.2, text: "$Double$<br>$Bonds$" }
+		];			
+		
+		container = d3.select("#rTCAComponents");
+		
+		container.selectAll("div")
+			 .data(layerLabels)
+			 .enter()
+			 .append("div")
+			 .style("position", "absolute")
+			 .style("left", function(d) { return x(d.x)+margin.left; })
+			 .style("top", function(d) { return y2(d.y)+margin.top; })
+			 .html(function(d) { return d.text; });
+
+		MathJax.Hub.Queue(["Typeset",MathJax.Hub]);
+	});
+</script>
+
+</body>
+</html>

@@ -78,9 +78,19 @@ function interpolate(w, data, idx, jdx)
 {
 	return data[idx][jdx]*(1-w)+data[idx+1][jdx]*w;
 }
-			  
-d3.text("rTCA_main.txt", function(data) {		
-		var tcaData = d3.csv.parseRows(data);
+
+var tcaData =
+[
+	["Oxaloacetate",    4, 2, 5, 3, 2, 0, -943.21,  -393.5, -285.8],
+	["Malate",          4, 4, 5, 2, 2, 0, -1007.41, -393.5, -285.8],
+	["Fumarate",        4, 2, 4, 3, 2, 1, -719.31,  -393.5, -285.8],
+	["Succinate",       4, 4, 4, 2, 2, 1, -821.51,  -393.5, -285.8],
+	["a-Ketoglutarate", 5, 4, 5, 3, 1, 2, -944.02,  -393.5, -285.8],
+	["Isocitrate",      6, 5, 7, 3, 0, 2, -1333.73, -393.5, -285.8],
+	["Aconitate",       6, 3, 6, 4, 0, 3, -1045.63, -393.5, -285.8],
+	["Citrate",         6, 5, 7, 3, 0, 2, -1339.93, -393.5, -285.8]
+]
+
 		var chartData = [ [], [], [] ];
 		var compositionData = [ [], [], [], []];
 		
@@ -371,7 +381,6 @@ d3.text("rTCA_main.txt", function(data) {
 			 .html(function(d) { return d.text; });
 
 		MathJax.Hub.Queue(["Typeset",MathJax.Hub]);
-	});
 </script>
 
 </body>

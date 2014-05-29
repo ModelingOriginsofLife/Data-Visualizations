@@ -86,15 +86,15 @@ function interpolate(w, data, idx, jdx)
 
 var tcaData = 
 [
-	["Names", "C", "H", "O", "DblBonds", "NCO2", "NH2O", "Gmain", "GCO2", "GH2O", "From dGs", "NH2", "GH+"],
-	["Oxaloacetate",    4, 2, 5, 3, 2, 0, -713.4,  -386, -157.3, -943.21,  0, 62.6],
-	["Malate",          4, 4, 5, 2, 2, 0, -682.9,  -386, -157.3, -1007.41, -1, 62.6],
-	["Fumarate",        4, 2, 4, 3, 2, 1, -522.0,  -386, -157.3, -719.31, -2, 62.6],
-	["Succinate",       4, 4, 4, 2, 2, 1, -530.7,  -386, -157.3, -821.51, -3, 62.6],
-	["a-Ketoglutarate", 5, 4, 5, 3, 1, 2, -633.7,  -386, -157.3, -944.02, -5, 62.6],
-	["Isocitrate",      6, 5, 7, 3, 0, 2, -956.4, -386, -157.3, -1333.73, -5, 62.6],
-	["Aconitate",       6, 3, 6, 4, 0, 3, -797.3, -386, -157.3, -1045.63, -6, 62.6],
-	["Citrate",         6, 5, 7, 3, 0, 2, -963.0, -386, -157.3, -1339.93, -6, 62.6]
+	["Names", "C", "H", "O", "DblBonds", "NCO2", "NH2O", "Gmain", "GCO2", "GH2O", "From dGs", "NH2", "GH+", "Kegg Reactions"],
+	["Oxaloacetate",    4, 2, 5, 3, 2, 0, -713.4,  -386, -157.3, -943.21,   0, 62.6, 44],
+	["Malate",          4, 4, 5, 2, 2, 0, -682.9,  -386, -157.3, -1007.41, -2, 62.6, 14],
+	["Fumarate",        4, 2, 4, 3, 2, 1, -522.0,  -386, -157.3, -719.31,  -2, 62.6, 18],
+	["Succinate",       4, 4, 4, 2, 2, 1, -530.7,  -386, -157.3, -821.51,  -3, 62.6, 129],
+	["a-Ketoglutarate", 5, 4, 5, 3, 1, 2, -633.7,  -386, -157.3, -944.02,  -5, 62.6, 210],
+	["Isocitrate",      6, 5, 7, 3, 0, 2, -956.4, -386, -157.3, -1333.73,  -6, 62.6, 7],
+	["Aconitate",       6, 3, 6, 4, 0, 3, -797.3, -386, -157.3, -1045.63,  -7, 62.6, 4],
+	["Citrate",         6, 5, 7, 3, 0, 2, -963.0, -386, -157.3, -1339.93,  -7, 62.6, 9]
 ];
 
 function getDeltaG(compound, pH)
@@ -142,7 +142,7 @@ var chartData;
 var compositionData;
 var names;
 
-var x,y,y2,xAxis,yAxis, area, arealine, lines;
+var x,y,y2,y3,xAxis,yAxis, area, arealine, lines, lines2;
 var color = ["rgb(128,192,128)", "rgb(128,128,192)", "rgb(160, 128, 92)", "rgb(192,64,64)"]; 
 var color2 = ["rgb(64,192,64)", "rgb(64,64,192)", "rgb(160, 92, 64)", "rgb(192, 64, 64)"]; 
 
@@ -164,7 +164,10 @@ function setupGraph()
 	y2 = d3.scale.linear()
 			.domain([0, 8])
 			.range([height, 0]);
-					
+	y3 = d3.scale.linear()
+			.domain([0,300])
+			.range([height,0]);
+			
 	xAxis = d3.svg.axis()
 			.scale(x)
 			.tickValues([0,1,2,3,4,5,6,7])
@@ -198,6 +201,10 @@ function setupGraph()
 	lines = d3.svg.line()
 						.x(function(d) { return x(d.x); })
 						.y(function(d) { return y2(d.y); });
+	
+	lines2 = d3.svg.line()
+						.x(function(d) { return x(d.x); })
+						.y(function(d) { return y3(d.y); });
 	// Background
 	graph1.append("g")
 		  .attr("render-order", 1)
@@ -378,6 +385,8 @@ function updateGraph()
 	chartData = [ [],[],[],[] ];
 	compositionData = [ [],[],[],[] ];
 	
+	var rxndata = [ [ ] ];
+	
 	for (var i=1;i<tcaData.length;i++)
 	{			
 	for (var j=0;j<10;j++)
@@ -390,6 +399,8 @@ function updateGraph()
 				
 		for (k=1;k<=4;k++)
 			compositionData[k-1].push({ x: xval, y: tcaData[i][k]});
+	
+		rxndata[0].push({ x: xval, y: tcaData[i][13]});
 	}
 
 	if (i<tcaData.length-1)
@@ -422,6 +433,8 @@ function updateGraph()
 					
 			for (k=1;k<=4;k++)
 				compositionData[k-1].push({ x: xval, y: interpolate(w,tcaData,i,k)})
+
+			rxndata[0].push({ x: xval, y: interpolate(w,tcaData,i,13)});
 		}
 		else for (var j=0;j<5;j++)
 		{
@@ -430,9 +443,10 @@ function updateGraph()
 			chartData[1].push({ x: xval, y: -tcaData[i][6]*tcaData[i][9], y0: 0});
 			chartData[2].push({ x: xval, y: -tcaData[i][7], y0: 0});
 			chartData[3].push({ x: xval, y: -tcaData[i][12]*tcaData[i][11], y0: 0});
+			rxndata[0].push({ x: xval, y: tcaData[i][13]});
 		}
 	}
-		
+			
 	var layers = stack(chartData);
 	var yGroupMax = d3.max(layers, function(layer) { return d3.max(layer, function(d) { return d.y; })});
 	var yStackMax = d3.max(layers, function(layer) { return d3.max(layer, function(d) { return d.y0; })});							
@@ -470,6 +484,16 @@ function updateGraph()
 			 .transition()
 			 .attr("d",arealine)
 			 
+	graph1.selectAll(".rxnline")
+			 .data(rxndata)
+			 .enter()
+			 .append("path")
+			 .attr("class","rxnline")
+			 .attr("d",lines2)
+			 .attr("stroke","rgba(64,0,0,0.5)")
+			 .attr("stroke-width","4")
+			 .attr("fill","rgba(0,0,0,0)");
+				
 	// Now graph 2
 												
 	graph2.selectAll(".comppath")
